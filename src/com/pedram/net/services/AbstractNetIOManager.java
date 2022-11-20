@@ -25,6 +25,15 @@ public abstract class AbstractNetIOManager implements IService {
     protected AbstractNetWriter netWriter;
 
     /**
+     * Services are not initialized in this constructor. So pay attention to set them later
+     * @param ip
+     * @param port
+     */
+    public AbstractNetIOManager(String ip, int port) {
+        this(null, null, ip, port);
+    };
+
+    /**
      * @param ip   the ip address to bind the listening socket to it
      * @param port the port that the listening socket will bind to it
      * @throws IOException may be thrown while creating selectors and sockets.

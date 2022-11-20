@@ -8,6 +8,10 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.PriorityBlockingQueue;
 
+/**
+ * The SelectorPool class holds a thread-safe priority queue to always deliver the selector with the least number of channels registered it.
+ * A map is also contained to find and update heap nodes easier later
+ */
 public class SelectorPool {
     private final PriorityBlockingQueue<SelectorWithChannelCount> selectors;
 
@@ -25,6 +29,10 @@ public class SelectorPool {
 
     }
 
+    /**
+     * Main responsibility of this class
+     * @return the selector with the least number of channels registered it
+     */
     public Selector getNextSelector() {
         return this.selectors.peek().getSelector();
     }
@@ -33,6 +41,11 @@ public class SelectorPool {
         return this.selectors.toArray(new SelectorWithChannelCount[0]);
     }
 
+    /**
+     * updates a selector in the heap nodes. simply first removes it and then add it again.
+     * @param selector the selector whose place in the heap needs to be updated
+     * @throws Exception The parameter selector may not be found in the heap
+     */
     public void updateSelectorState(Selector selector) throws Exception {
         SelectorWithChannelCount selectorWithCount = selectorCorresponder.get(selector);
         if (selectors.remove(selectorWithCount))
@@ -41,6 +54,9 @@ public class SelectorPool {
             throw new Exception("Selector not Found");
     }
 
+    /**
+     * Just a simple class that provides comparability, equality and ability to be used in a map for the selectors
+     */
     static public class SelectorWithChannelCount implements Comparable<SelectorWithChannelCount> {
         private final Selector selector;
 

@@ -28,8 +28,7 @@ public abstract class AbstractEventDrivenServer implements IService, INetMessage
         this.services.add(netIOManager);
     }
 
-    public AbstractEventDrivenServer() {
-    }
+    public AbstractEventDrivenServer() {} // default constructor so that other services will be added later after construction
 
     public void setNetIOManager(AbstractNetIOManager netIOManager) {
         services.remove(this.netIOManager);
@@ -37,12 +36,20 @@ public abstract class AbstractEventDrivenServer implements IService, INetMessage
         services.add(netIOManager);
     }
 
+    @Override
     public void start() {
         for (IService service : services)
             service.start();
     }
 
 
+    /**
+     * The overridden method from INetMessageProcessor. you can implement this and pass this class as an INetMessageManager
+     * and make main things happen in the center
+     * @param msg
+     * @param session
+     * @param <MsgType>
+     */
     @Override
     public abstract <MsgType> void processNewNetMessage(MessageBody<MsgType> msg, Session session);
 }
