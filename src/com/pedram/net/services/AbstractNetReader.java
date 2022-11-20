@@ -1,5 +1,10 @@
-package com.pedram.net;
+package com.pedram.net.services;
 
+
+import com.pedram.net.INetDataProcessor;
+import com.pedram.net.ISessionCreator;
+import com.pedram.net.SelectorPool;
+import com.pedram.net.Session;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -10,13 +15,16 @@ import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
 public abstract class AbstractNetReader implements IService {
 
-    INetDataProcessor dataProcessor;
+    protected INetDataProcessor dataProcessor;
 
-    ExecutorService readThreadPool;
+    protected ExecutorService readThreadPool;
 
-    SelectorPool readSelectorPool;
+    protected SelectorPool readSelectorPool;
+
+    protected ISessionCreator sessionCreator;
 
     public void setDataProcessor(INetDataProcessor dataProcessor) {
         this.dataProcessor = dataProcessor;
@@ -25,8 +33,6 @@ public abstract class AbstractNetReader implements IService {
     public void setSessionCreator(ISessionCreator sessionCreator) {
         this.sessionCreator = sessionCreator;
     }
-
-    ISessionCreator sessionCreator;
 
     /**
      * @param readThreadsCount number of all threads that's recommended that this service and all its reading subservices will create and use(preferably in thread-pools
@@ -84,7 +90,7 @@ public abstract class AbstractNetReader implements IService {
      * <p>
      * Each instance has its own selector that selects some channels each time and then let the dataProcessor to process the data
      */
-    private class AsyncNetReader implements Runnable {
+    protected class AsyncNetReader implements Runnable {
 
         Selector readerSelector;
 
@@ -106,7 +112,7 @@ public abstract class AbstractNetReader implements IService {
                             if (key.attachment() == null) {
                                 key.attach(sessionCreator.createSession(key));
                             }
-                            if (!dataProcessor.processNewNetData(key)) {
+                            if (!dataProcessor.processNewNetData((Session)key.attachment())) {
                                 readSelectorPool.updateSelectorState(key.selector());
                             }
                         } else {

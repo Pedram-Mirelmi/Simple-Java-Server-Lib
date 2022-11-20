@@ -1,5 +1,6 @@
-package com.pedram.net;
+package com.pedram.net.services;
 
+import com.pedram.net.Session;
 import com.pedram.net.io.MessageBody;
 
 import java.util.LinkedList;
@@ -17,9 +18,9 @@ import java.util.LinkedList;
  */
 public abstract class AbstractEventDrivenServer implements IService {
 
-    LinkedList<IService> services;
+    protected LinkedList<IService> services;
 
-    AbstractNetIOManager netIOManager;
+    protected AbstractNetIOManager netIOManager;
 
     public AbstractEventDrivenServer(AbstractNetIOManager netIOManager) {
         this.netIOManager = netIOManager;
@@ -41,6 +42,6 @@ public abstract class AbstractEventDrivenServer implements IService {
     }
 
 
-    abstract <T>
+    public abstract <T>
     void handleNewMessage(MessageBody<T> msg, Session session);
 }

@@ -9,12 +9,13 @@ import java.util.Objects;
 import java.util.concurrent.PriorityBlockingQueue;
 
 public class SelectorPool {
-    PriorityBlockingQueue<SelectorWithChannelCount> selectors;
+    private final PriorityBlockingQueue<SelectorWithChannelCount> selectors;
 
-    HashMap<Selector, SelectorWithChannelCount> selectorCorresponder;
+    private final HashMap<Selector, SelectorWithChannelCount> selectorCorresponder;
 
     public SelectorPool(int numberOfSelectors) throws IOException {
         this.selectors = new PriorityBlockingQueue<>();
+        this.selectorCorresponder = new HashMap<>();
         for (int i = 0; i < numberOfSelectors; i++) {
             SelectorWithChannelCount selectorWithCount = new SelectorWithChannelCount(Selector.open());
             selectors.add(selectorWithCount);

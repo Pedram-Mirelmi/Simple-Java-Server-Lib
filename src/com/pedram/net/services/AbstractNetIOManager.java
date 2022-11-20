@@ -1,4 +1,4 @@
-package com.pedram.net;
+package com.pedram.net.services;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -19,10 +19,10 @@ import java.util.Iterator;
 
 public abstract class AbstractNetIOManager implements IService {
 
-    private final String ip;
-    private final int port;
-    AbstractNetReader netReader;
-    AbstractNetWriter netWriter;
+    protected final String ip;
+    protected final int port;
+    protected AbstractNetReader netReader;
+    protected AbstractNetWriter netWriter;
 
     /**
      * @param ip   the ip address to bind the listening socket to it
@@ -58,7 +58,7 @@ public abstract class AbstractNetIOManager implements IService {
     /**
      * An implementation of Runnable class that will be run in a separate to accept new connections nonblocking
      */
-    private class AsyncNetAcceptor implements Runnable {
+    protected class AsyncNetAcceptor implements Runnable {
 
         Selector acceptorSelector;
         ServerSocketChannel listeningSocket;
