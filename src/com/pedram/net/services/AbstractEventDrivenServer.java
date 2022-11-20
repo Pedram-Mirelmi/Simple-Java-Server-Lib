@@ -1,5 +1,6 @@
 package com.pedram.net.services;
 
+import com.pedram.net.INetMessageProcessor;
 import com.pedram.net.Session;
 import com.pedram.net.io.MessageBody;
 
@@ -16,7 +17,7 @@ import java.util.LinkedList;
  * @implNote It's also recommended that services use a thread safe queue for communication and use
  * producer-consumer model. when a new net message arrives it should be delivered to handleNewMessage method
  */
-public abstract class AbstractEventDrivenServer implements IService {
+public abstract class AbstractEventDrivenServer implements IService, INetMessageProcessor {
 
     protected LinkedList<IService> services;
 
@@ -42,6 +43,6 @@ public abstract class AbstractEventDrivenServer implements IService {
     }
 
 
-    public abstract <T>
-    void handleNewMessage(MessageBody<T> msg, Session session);
+    @Override
+    public abstract <MsgType> void processNewNetMessage(MessageBody<MsgType> msg, Session session);
 }

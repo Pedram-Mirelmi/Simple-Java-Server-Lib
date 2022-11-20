@@ -51,7 +51,7 @@ public abstract class AbstractNetIOManager implements IService {
             netReader.start();
             netWriter.start();
         } catch (IOException e) {
-            System.out.println("Something went wrong with starting the service");
+            System.out.println("Something went wrong with starting the service: " + e.getMessage());
         }
     }
 
@@ -60,8 +60,8 @@ public abstract class AbstractNetIOManager implements IService {
      */
     protected class AsyncNetAcceptor implements Runnable {
 
-        Selector acceptorSelector;
-        ServerSocketChannel listeningSocket;
+        protected Selector acceptorSelector;
+        protected ServerSocketChannel listeningSocket;
 
         public AsyncNetAcceptor() throws IOException {
             acceptorSelector = Selector.open();
@@ -88,8 +88,8 @@ public abstract class AbstractNetIOManager implements IService {
                         }
                     }
                 }
-            } catch (IOException e) {
-                System.out.println("Something went wrong with accepting a client");
+            } catch (Exception e) {
+                System.out.println("Something went wrong with accepting a client: " + e.getMessage());
             }
         }
     }

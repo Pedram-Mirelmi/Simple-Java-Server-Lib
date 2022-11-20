@@ -1,10 +1,8 @@
 package com.pedram.net.services;
 
 
-import com.pedram.net.INetDataProcessor;
 import com.pedram.net.ISessionCreator;
 import com.pedram.net.SelectorPool;
-import com.pedram.net.Session;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -18,56 +16,28 @@ import java.util.concurrent.Executors;
 
 public abstract class AbstractNetReader implements IService {
 
-    protected INetDataProcessor dataProcessor;
-
     protected ExecutorService readThreadPool;
-
     protected SelectorPool readSelectorPool;
 
     protected ISessionCreator sessionCreator;
-
-    public void setDataProcessor(INetDataProcessor dataProcessor) {
-        this.dataProcessor = dataProcessor;
-    }
-
-    public void setSessionCreator(ISessionCreator sessionCreator) {
-        this.sessionCreator = sessionCreator;
-    }
 
     /**
      * @param readThreadsCount number of all threads that's recommended that this service and all its reading subservices will create and use(preferably in thread-pools
      * @throws IOException calling another constructor may throw an IOException
      */
     public AbstractNetReader(int readThreadsCount) throws IOException {
-        this(null, null, readThreadsCount);
+        this(null, readThreadsCount);
     }
 
     /**
      * @param sessionCreator   the interface with which we create sessions
-     * @param dataProcessor    the interface to which we deliver each new data arrived
      * @param readThreadsCount number of all threads that's recommended that this service and all its reading subservices will create and use(preferably in thread-pools
      * @throws IOException Creating a SelectorPool may throw an IOException
      */
-    public AbstractNetReader(INetDataProcessor dataProcessor, ISessionCreator sessionCreator, int readThreadsCount) throws IOException {
-        this.dataProcessor = dataProcessor;
+    public AbstractNetReader(ISessionCreator sessionCreator, int readThreadsCount) throws IOException {
         this.sessionCreator = sessionCreator;
         readThreadPool = Executors.newFixedThreadPool(readThreadsCount);
         readSelectorPool = new SelectorPool(readThreadsCount);
-    }
-
-
-    /**
-     * The Method with which we distribute the new connections to several selectors
-     *
-     * @param newClient the socket of the new connection
-     * @throws IOException registering may throw IOException
-     */
-    public void registerNewConnection(@NotNull SocketChannel newClient) throws IOException {
-        newClient.configureBlocking(false);
-
-        // Here we distribute the sockets and hand it in to the selector with the least number of channels registered it
-        SelectorPool.SelectorWithChannelCount selector = readSelectorPool.getSelectors().poll();
-        newClient.register(selector.getSelector(), SelectionKey.OP_READ);
     }
 
 
@@ -85,6 +55,29 @@ public abstract class AbstractNetReader implements IService {
         }
     }
 
+    public void setSessionCreator(ISessionCreator sessionCreator) {
+        this.sessionCreator = sessionCreator;
+    }
+
+
+    /**
+     * The Method with which we distribute the new connections to several selectors
+     *
+     * @param newClient the socket of the new connection
+     * @throws IOException registering may throw IOException
+     */
+    public void registerNewConnection(@NotNull SocketChannel newClient) throws Exception {
+        newClient.configureBlocking(false);
+
+        // Here we distribute the sockets and hand it in to the selector with the least number of channels registered it
+        Selector nextSelector = readSelectorPool.getNextSelector();
+        newClient.register(nextSelector, SelectionKey.OP_READ);
+        readSelectorPool.updateSelectorState(nextSelector);
+    }
+
+
+    protected abstract void handleNewRead(@NotNull SelectionKey key) throws Exception;
+
     /**
      * An implementation of Runnable that will be delivered to the thread-pool
      * <p>
@@ -92,19 +85,19 @@ public abstract class AbstractNetReader implements IService {
      */
     protected class AsyncNetReader implements Runnable {
 
-        Selector readerSelector;
+        protected Selector readSelector;
 
         public AsyncNetReader(Selector selector) {
-            this.readerSelector = selector;
+            this.readSelector = selector;
         }
 
         @Override
         public void run() {
             try {
                 while (true) {
-                    if (readerSelector.select() <= 0)
+                    if (readSelector.select() <= 0)
                         continue;
-                    Iterator<SelectionKey> selectedKeysItter = readerSelector.selectedKeys().iterator();
+                    Iterator<SelectionKey> selectedKeysItter = readSelector.selectedKeys().iterator();
                     while (selectedKeysItter.hasNext()) {
                         SelectionKey key = selectedKeysItter.next();
                         selectedKeysItter.remove();
@@ -112,9 +105,7 @@ public abstract class AbstractNetReader implements IService {
                             if (key.attachment() == null) {
                                 key.attach(sessionCreator.createSession(key));
                             }
-                            if (!dataProcessor.processNewNetData((Session)key.attachment())) {
-                                readSelectorPool.updateSelectorState(key.selector());
-                            }
+                            handleNewRead(key);
                         } else {
                             throw new IllegalStateException("Unknown state of key");
                         }

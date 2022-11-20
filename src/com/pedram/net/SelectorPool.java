@@ -25,8 +25,12 @@ public class SelectorPool {
 
     }
 
-    public PriorityBlockingQueue<SelectorWithChannelCount> getSelectors() {
-        return this.selectors;
+    public Selector getNextSelector() {
+        return this.selectors.peek().getSelector();
+    }
+
+    public SelectorWithChannelCount[] getSelectors() throws ClassCastException {
+        return this.selectors.toArray(new SelectorWithChannelCount[0]);
     }
 
     public void updateSelectorState(Selector selector) throws Exception {

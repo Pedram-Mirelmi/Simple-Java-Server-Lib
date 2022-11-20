@@ -16,6 +16,6 @@ public abstract class AbstractNetWriter implements IService {
     }
 
 
-    public abstract <MsgType> void write(Session session, MessageBody<MsgType> messageBody);
+    public abstract <MsgType> void writeNewNetMessage(Session session, MessageBody<MsgType> messageBody);
 
 }
