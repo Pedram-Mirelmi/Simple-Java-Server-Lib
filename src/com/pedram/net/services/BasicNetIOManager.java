@@ -1,10 +1,13 @@
 package com.pedram.net.services;
 
+import com.pedram.demo.serverlib.server.SessionCreator;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,15 +26,17 @@ public class BasicNetIOManager<MsgType> implements IService {
     protected final int port;
     protected AbstractNetReader netReader;
     protected AbstractNetWriter<MsgType> netWriter;
-    private final ExecutorService acceptor;
 
+    protected SessionCreator sessionCreator;
+
+    private final ExecutorService acceptor;
     /**
      * Services are not initialized in this constructor. So pay attention to set them later
      * @param ip the ip of the acceptor socket
      * @param port the port of the acceptor socket
      */
     public BasicNetIOManager(String ip, int port) {
-        this(null, null, ip, port);
+        this(null, null, null, ip, port);
     }
 
     /**
@@ -40,7 +45,7 @@ public class BasicNetIOManager<MsgType> implements IService {
      * @param netWriter the netWriter service
      * @param netReader the netReader service
      */
-    public BasicNetIOManager(AbstractNetReader netReader, AbstractNetWriter<MsgType> netWriter, String ip, int port) {
+    public BasicNetIOManager(SessionCreator sessionCreator, AbstractNetReader netReader, AbstractNetWriter<MsgType> netWriter, String ip, int port) {
         this.acceptor = Executors.newSingleThreadExecutor();
         this.netReader = netReader;
         this.netWriter = netWriter;
@@ -56,13 +61,17 @@ public class BasicNetIOManager<MsgType> implements IService {
         this.netWriter = netWriter;
     }
 
+    public void setSessionCreator(SessionCreator sessionCreator) {
+        this.sessionCreator = sessionCreator;
+    }
+
     public AbstractNetWriter<MsgType> getNetWriter() {
         return netWriter;
     }
 
     @Override
     public void start() throws Exception {
-        if(netWriter == null || netReader == null)
+        if(netWriter == null || netReader == null || sessionCreator == null)
             throw new RuntimeException("Not All Services has set properly");
         try {
             acceptor.execute(new AsyncNetAcceptor());
@@ -106,7 +115,7 @@ public class BasicNetIOManager<MsgType> implements IService {
                     while (selectedKeysItter.hasNext()) {
                         SelectionKey key = selectedKeysItter.next();
                         if (key.isAcceptable()) {
-                            netReader.registerNewConnection(listeningSocket.accept());
+                            netReader.registerNewConnection(sessionCreator.createSession((SocketChannel) key.channel()));
                         } else {
                             throw new IllegalStateException("Unknown state of key");
                         }
