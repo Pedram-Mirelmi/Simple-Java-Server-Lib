@@ -6,39 +6,42 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * An abstract net io handler that has two separate services for reading and writing
  * We use dependency injection in constructor for these two services
- * <p>
  * Another method that needs implementing is sendRespond. you may just call write on the socket in a loop until there's no remaining.
  * Or you can create a senderService and add it.
- * <p>
- * Extending Session class and overriding createSession is also recommended
+ * Extending BasicSession class and overriding createSession is also recommended
  */
 
-public abstract class AbstractNetIOManager implements IService {
+public class BasicNetIOManager<MsgType> implements IService {
 
     protected final String ip;
     protected final int port;
     protected AbstractNetReader netReader;
-    protected AbstractNetWriter netWriter;
+    protected AbstractNetWriter<MsgType> netWriter;
+    private final ExecutorService acceptor;
 
     /**
      * Services are not initialized in this constructor. So pay attention to set them later
-     * @param ip
-     * @param port
+     * @param ip the ip of the acceptor socket
+     * @param port the port of the acceptor socket
      */
-    public AbstractNetIOManager(String ip, int port) {
+    public BasicNetIOManager(String ip, int port) {
         this(null, null, ip, port);
-    };
+    }
 
     /**
      * @param ip   the ip address to bind the listening socket to it
      * @param port the port that the listening socket will bind to it
-     * @throws IOException may be thrown while creating selectors and sockets.
+     * @param netWriter the netWriter service
+     * @param netReader the netReader service
      */
-    public AbstractNetIOManager(AbstractNetReader netReader, AbstractNetWriter netWriter, String ip, int port) {
+    public BasicNetIOManager(AbstractNetReader netReader, AbstractNetWriter<MsgType> netWriter, String ip, int port) {
+        this.acceptor = Executors.newSingleThreadExecutor();
         this.netReader = netReader;
         this.netWriter = netWriter;
         this.ip = ip;
@@ -49,19 +52,32 @@ public abstract class AbstractNetIOManager implements IService {
         this.netReader = netReader;
     }
 
-    public void setNetWriter(AbstractNetWriter netWriter) {
+    public void setNetWriter(AbstractNetWriter<MsgType> netWriter) {
         this.netWriter = netWriter;
     }
 
+    public AbstractNetWriter<MsgType> getNetWriter() {
+        return netWriter;
+    }
+
     @Override
-    public void start() {
+    public void start() throws Exception {
+        if(netWriter == null || netReader == null)
+            throw new RuntimeException("Not All Services has set properly");
         try {
-            new Thread(new AsyncNetAcceptor()).start();
+            acceptor.execute(new AsyncNetAcceptor());
             netReader.start();
             netWriter.start();
         } catch (IOException e) {
             System.out.println("Something went wrong with starting the service: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void stop() {
+        acceptor.shutdown();
+        netReader.stop();
+        netWriter.stop();
     }
 
     /**
@@ -82,29 +98,25 @@ public abstract class AbstractNetIOManager implements IService {
 
         @Override
         public void run() {
-            try {
-                while (true) {
+            while (true) {
+                try {
                     if (acceptorSelector.select() <= 0)
                         continue;
                     Iterator<SelectionKey> selectedKeysItter = acceptorSelector.selectedKeys().iterator();
                     while (selectedKeysItter.hasNext()) {
                         SelectionKey key = selectedKeysItter.next();
-                        selectedKeysItter.remove();
                         if (key.isAcceptable()) {
                             netReader.registerNewConnection(listeningSocket.accept());
                         } else {
                             throw new IllegalStateException("Unknown state of key");
                         }
+                        selectedKeysItter.remove();
                     }
+
+                } catch (Exception e) {
+                    System.out.println("Something went wrong with accepting a client: " + e.getMessage());
                 }
-            } catch (Exception e) {
-                System.out.println("Something went wrong with accepting a client: " + e.getMessage());
             }
         }
     }
-
-    /**
-     * An implementation of Runnable that will be delivered to a thread-pool to read from multiple sockets nonblocking
-     */
-
 }

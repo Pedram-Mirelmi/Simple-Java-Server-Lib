@@ -1,9 +1,10 @@
 package com.pedram.net;
 
-import com.pedram.net.io.MessageBody;
+import com.pedram.net.io.BasicNetMessage;
+import com.pedram.net.services.IService;
 
-public interface INetMessageProcessor {
+public interface INetMessageProcessor<MsgType> extends IService {
     
-    public abstract <MsgType> void processNewNetMessage(MessageBody<MsgType> msg, Session session);
+    void processNetMessage(BasicNetMessage<MsgType> msg, BasicSession session);
 }
 

@@ -1,7 +1,6 @@
 package com.pedram.net;
-
-import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 
 public interface ISessionCreator {
-    Session createSession(SelectionKey key);
+    BasicSession createSession(SocketChannel socket);
 }

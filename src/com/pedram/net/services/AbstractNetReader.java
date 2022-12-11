@@ -1,6 +1,5 @@
 package com.pedram.net.services;
 
-
 import com.pedram.net.ISessionCreator;
 import com.pedram.net.SelectorPool;
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +19,8 @@ public abstract class AbstractNetReader implements IService {
     protected SelectorPool readSelectorPool;
 
     protected ISessionCreator sessionCreator;
+
+
 
     /**
      * @param readThreadsCount number of all threads that's recommended that this service and all its reading subservices will create and use(preferably in thread-pools
@@ -45,7 +46,10 @@ public abstract class AbstractNetReader implements IService {
      * The overridden method from IService interface that assign tasks to the thread-pool
      */
     @Override
-    public void start() {
+    public void start() throws NullPointerException {
+        if(sessionCreator == null)
+            throw new NullPointerException("not all subservices are set properly");
+
         try {
             for (SelectorPool.SelectorWithChannelCount selector : readSelectorPool.getSelectors()) {
                 readThreadPool.execute(new AsyncNetReader(selector.getSelector()));
@@ -103,7 +107,7 @@ public abstract class AbstractNetReader implements IService {
                         selectedKeysItter.remove();
                         if (key.isReadable()) {
                             if (key.attachment() == null) {
-                                key.attach(sessionCreator.createSession(key));
+                                key.attach(sessionCreator.createSession((SocketChannel)key.channel()));
                             }
                             handleNewRead(key);
                         } else {
