@@ -7,14 +7,13 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * An abstract net io handler that has two separate services for reading and writing
- * We use dependency injection in constructor for these two services
+ * We use dependency injection in constructor for these two service
  * Another method that needs implementing is sendRespond. you may just call write on the socket in a loop until there's no remaining.
  * Or you can create a senderService and add it.
  * Extending BasicSession class and overriding createSession is also recommended
@@ -47,6 +46,7 @@ public class BasicNetIOManager<MsgType> implements IService {
      */
     public BasicNetIOManager(SessionCreator sessionCreator, AbstractNetReader netReader, AbstractNetWriter<MsgType> netWriter, String ip, int port) {
         this.acceptor = Executors.newSingleThreadExecutor();
+        this.sessionCreator = sessionCreator;
         this.netReader = netReader;
         this.netWriter = netWriter;
         this.ip = ip;
@@ -115,7 +115,8 @@ public class BasicNetIOManager<MsgType> implements IService {
                     while (selectedKeysItter.hasNext()) {
                         SelectionKey key = selectedKeysItter.next();
                         if (key.isAcceptable()) {
-                            netReader.registerNewConnection(sessionCreator.createSession((SocketChannel) key.channel()));
+                            ServerSocketChannel acceptorSocket = (ServerSocketChannel) key.channel();
+                            netReader.registerNewConnection(sessionCreator.createSession(acceptorSocket.accept()));
                         } else {
                             throw new IllegalStateException("Unknown state of key");
                         }

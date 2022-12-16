@@ -55,6 +55,7 @@ public abstract class AbstractNetReader implements IService {
         // Here we distribute the sockets and hand it in to the selector with the least number of channels registered it
         Selector nextSelector = readSelectorPool.getNextSelector();
         SelectionKey key = clientSocket.register(nextSelector, SelectionKey.OP_READ);
+        nextSelector.wakeup();
         key.attach(session);
         readSelectorPool.updateSelectorState(nextSelector);
     }
@@ -93,7 +94,7 @@ public abstract class AbstractNetReader implements IService {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("Something went wrong with reading: " + e.getMessage());
+                    System.out.println("Something went wrong with reading: " + e.getMessage());
             }
         }
     }
